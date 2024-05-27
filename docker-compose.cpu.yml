@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  nextjs:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - ollama
+    networks:
+      - default
+      - internal
+
+  ollama:
+    image: "ollama/ollama"
+    volumes:
+      - "ollama:/root/.ollama"
+    expose:
+      - "11434"
+    networks:
+      - internal
+    restart: unless-stopped
+
+volumes:
+  ollama:
+
+networks:
+  default:
+  internal:
+    internal: true

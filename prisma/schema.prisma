@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x", "windows", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UserRole {
+  id    String @id
+  users User[]
+}
+
+model User {
+  id             String    @id @default(cuid())
+  displayId      String    @unique
+  roleId         String    @default("member")
+  password       String    @unique
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  role      UserRole    @relation(fields: [roleId], references: [id])
+  AccessLog AccessLog[]
+}
+
+model Operation {
+  id   String      @id
+  logs AccessLog[]
+}
+
+model AccessLog {
+  id          String     @id @default(cuid())
+  timestamp   DateTime   @default(now())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  statusCode  Int
+  Operation   Operation? @relation(fields: [operationId], references: [id])
+  operationId String?
+
+  @@index([userId])
+  @@index([timestamp])
+}
