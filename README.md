@@ -7,7 +7,7 @@ Ollama4Team is a proxy for Ollama that provides
 - Usage statistics
 - Model management
 
-## Getting Started
+## Installation
 ### Clone this repository
 ```bash
 git clone https://github.com/fjm2u/ollama4team.git
@@ -41,7 +41,7 @@ docker-compose -f docker-compose.amd-gpu.yml up -d --build
 3.Access to the web interface at `http://localhost:3000`
 
 
-## Usage
+## Getting Started
 
 ### Panel
 Users
