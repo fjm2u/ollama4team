@@ -10,7 +10,6 @@ services:
       - ollama
     networks:
       - default
-      - internal
 
   ollama:
     image: "ollama/ollama:rocm"
@@ -22,7 +21,7 @@ services:
       - "/dev/kfd:/dev/kfd"
       - "/dev/dri:/dev/dri"
     networks:
-      - internal
+      - default
     restart: unless-stopped
 
 volumes:
@@ -30,5 +29,3 @@ volumes:
 
 networks:
   default:
-  internal:
-    internal: true

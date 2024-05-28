@@ -10,7 +10,6 @@ services:
       - ollama
     networks:
       - default
-      - internal
 
   ollama:
     image: "ollama/ollama"
@@ -19,7 +18,7 @@ services:
     expose:
       - "11434"
     networks:
-      - internal
+      - default
     restart: unless-stopped
 
 volumes:
@@ -27,5 +26,3 @@ volumes:
 
 networks:
   default:
-  internal:
-    internal: true
