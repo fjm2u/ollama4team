@@ -5,7 +5,9 @@ import {add_embeddings_log} from "../../../lib/stats";
 export async function POST(request: Request) {
     const data = await request.json()
     const user = await check_basic_token(request)
-    if (user == false) return Response.json({ error: "Unauthorized" }, { status: 403 })
+    if (user == false) {
+        return Response.json({ error: "Unauthorized" }, { status: 403 })
+    }
 
     try {
         const response = await fetch(process.env.OLLAMA_URL + "/api/embeddings", {

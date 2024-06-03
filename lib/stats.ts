@@ -1,7 +1,19 @@
 import prisma from "./prisma";
 
 
+const update_last_access = async (userId: string) => {
+    await prisma.user.update({
+        where: {
+            id: userId
+        },
+        data: {
+            lastAccessedAt: new Date()
+        }
+    })
+}
+
 const add_embeddings_log = async (userId: string, statusCode: number) => {
+    await update_last_access(userId)
     await prisma.accessLog.create({
         data: {
             operationId: 'embedding',
@@ -12,6 +24,7 @@ const add_embeddings_log = async (userId: string, statusCode: number) => {
 }
 
 const add_generate_log = async (userId: string, statusCode: number) => {
+    await update_last_access(userId)
     await prisma.accessLog.create({
         data: {
             operationId: 'generate',
