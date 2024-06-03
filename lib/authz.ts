@@ -31,7 +31,9 @@ const check_basic_token = async (request: Request) => {
     const token = request.headers.get("Authorization").replace("Basic ", "")
     const user = await prisma.user.findUnique({
         where: {
-            password: sha256(token)
+            password: sha256(token),
+            // adminアカウントでの認証は許可しない
+            roleId: "member"
         }
     })
     if (!user) return false
