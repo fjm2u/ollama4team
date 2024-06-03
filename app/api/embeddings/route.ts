@@ -1,11 +1,12 @@
 import fetch from 'node-fetch';
 import {check_basic_token} from "../../../lib/authz";
-import {add_embeddings_log} from "../../../lib/stats";
+import {add_embeddings_log, add_forbidden_log} from "../../../lib/stats";
 
 export async function POST(request: Request) {
     const data = await request.json()
     const user = await check_basic_token(request)
     if (user == false) {
+        await add_forbidden_log('embedding')
         return Response.json({ error: "Unauthorized" }, { status: 403 })
     }
 

@@ -12,6 +12,15 @@ const update_last_access = async (userId: string) => {
     })
 }
 
+const add_forbidden_log = async (operationId: string) => {
+    await prisma.accessLog.create({
+        data: {
+            operationId: operationId,
+            statusCode: 403,
+        }
+    })
+}
+
 const add_embeddings_log = async (userId: string, statusCode: number) => {
     await update_last_access(userId)
     await prisma.accessLog.create({
@@ -34,4 +43,4 @@ const add_generate_log = async (userId: string, statusCode: number) => {
     })
 }
 
-export {add_embeddings_log, add_generate_log}
+export {add_embeddings_log, add_generate_log, add_forbidden_log}

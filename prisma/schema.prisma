@@ -36,8 +36,8 @@ model Operation {
 model AccessLog {
   id          String     @id @default(cuid())
   timestamp   DateTime   @default(now())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id])
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id])
   statusCode  Int
   Operation   Operation? @relation(fields: [operationId], references: [id])
   operationId String?
