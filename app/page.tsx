@@ -31,14 +31,19 @@ import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
 import {useEffect, useState} from "react";
 import {SessionProvider, useSession} from "next-auth/react";
-import {date} from "zod";
 import {Toaster} from "@/components/ui/toaster";
 import {date_to_str} from "../lib/date";
 import { signOut } from "next-auth/react"
 import {Settings} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import {Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
-
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 export default function Home() {
     return (
@@ -119,100 +124,121 @@ const MainContents = () => {
 }
 
 // Stats
-interface StatsData {
+interface LogEntry {
     timestamp: string;
-    [key: string]: string | number;
-}
-
-interface OperationData {
-    timestamp: string;
-    operationId: string;
+    totalAccess: number;
+    statusCodes: { [statusCode: string]: number };
+    operations: { [operationId: string]: number };
+    users: { [userId: string]: number };
 }
 
 const Stats = () => {
-    const [logs, setLogs] = useState<StatsData[]>([]);
-    const [operations, setOperations] = useState<string[]>([]);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [currentView, setCurrentView] = useState<string>('totalAccess'); // Default view
+    const [statusColors, setStatusColors] = useState<{ [key: string]: string }>({});
+    const [operationColors, setOperationColors] = useState<{ [key: string]: string }>({});
+    const [userColors, setUserColors] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
         const fetchStats = async () => {
             const response = await fetch("/api/stats");
-            const data: OperationData[] = await response.json();
-            const processedData = aggregateData(data);
-            setLogs(processedData);
-            const uniqueOperations = Array.from(new Set(data.map(item => item.operationId)));
-            setOperations(uniqueOperations);
+            const data: any[] = await response.json(); // APIレスポンスの適切な型定義を行う
+            processData(data);
+            assignColors(data);
         };
         fetchStats();
     }, []);
 
-    const operationColors: { [key: string]: string } = {
-        generate: "#8884d8",
-        embedding: "#82ca9d",
-    };
+    const processData = (newData: any[]): void => {
+        setLogs(prevLogs => {
+            const existingDataMap = prevLogs.reduce((acc: { [key: string]: LogEntry }, log: LogEntry) => {
+                acc[log.timestamp] = log;
+                return acc;
+            }, {});
 
-    const aggregateData = (data: OperationData[]): StatsData[] => {
-        const hourlyTotals: { [key: string]: { [key: string]: number } } = {};
-        data.forEach(item => {
-            const date = new Date(item.timestamp);
-            date.setMinutes(0, 0, 0); // 時間を丸める
-            const hourKey = date.toISOString();
+            const updatedData = newData.reduce((acc: { [key: string]: LogEntry }, item: any) => {
+                const date = new Date(item.timestamp);
+                date.setMinutes(0, 0, 0);
+                const hour = date.toISOString();
 
-            if (!hourlyTotals[hourKey]) {
-                hourlyTotals[hourKey] = { generate: 0, embedding: 0 };
-            }
-            hourlyTotals[hourKey][item.operationId] = (hourlyTotals[hourKey][item.operationId] || 0) + 1;
+                const entry = acc[hour] || existingDataMap[hour] || { timestamp: hour, totalAccess: 0, statusCodes: {}, operations: {}, users: {} };
+                entry.totalAccess++;
+                entry.statusCodes[item.statusCode] = (entry.statusCodes[item.statusCode] || 0) + 1;
+                entry.operations[item.operationId] = (entry.operations[item.operationId] || 0) + 1;
+                if (item.user && item.user.displayId)
+                    entry.users[item.user.displayId] = (entry.users[item.user.displayId] || 0) + 1;
+
+                acc[hour] = entry;
+                return acc;
+            }, existingDataMap);
+
+            return Object.values(updatedData).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         });
-
-        return Object.keys(hourlyTotals).map(hour => ({
-            timestamp: hour,
-            ...hourlyTotals[hour]
-        })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     };
-
+    const assignColors = (data: any[]): void => {
+        const colorPalette = [
+            '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#ff69b4',
+            '#fa8072', '#6a5acd', '#ff6347', '#20b2aa', '#f08080', '#4682b4', '#d2b48c',
+            '#ff69b4', '#00ff7f', '#87cefa', '#778899', '#b0c4de', '#ff4500', '#da70d6',
+            '#ff8c00', '#40e0d0', '#7b68ee', '#00fa9a', '#9370db', '#00ff00', '#ff1493',
+            '#00bfff', '#8a2be2', '#32cd32', '#ff00ff', '#1e90ff', '#ff00ff', '#00ced1']
+        const statusCodes = Array.from(new Set(data.map((item: any) => item.statusCode)));
+        const operationIds = Array.from(new Set(data.map((item: any) => item.operationId)));
+        const statusColors: { [key: string]: string } = {};
+        const operationColors: { [key: string]: string } = {};
+        statusCodes.forEach((code, index) => {
+            statusColors[code] = colorPalette[index % colorPalette.length];
+        });
+        operationIds.forEach((id, index) => {
+            operationColors[id] = colorPalette[(index + statusCodes.length) % colorPalette.length];
+        });
+        setStatusColors(statusColors);
+        setOperationColors(operationColors);
+    };
+    const handleViewChange = (view: string): void => {
+        setCurrentView(view);
+    };
     const dateToStr = (date: string): string => new Date(date).toLocaleString();
 
-    const CustomTooltip: React.FC<{ active?: boolean; payload?: any[] }> = ({ active, payload }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="custom-tooltip">
-                    {payload.map((p, index) => (
-                        <p key={index} className="intro">{`${p.name}: Count: ${p.value}`}</p>
-                    ))}
-                </div>
-            );
-        }
-        return null;
-    };
-
     return (
-        <div>
-            <div className="my-4">
-                <div className="text-2xl font-bold">Stats</div>
+        <div style={{ width: '100%', height: '250px' }}>
+            <div className="controls">
+                <Select onValueChange={(value) => handleViewChange(value)}>
+                    <SelectTrigger className="w-[280px]">
+                        <SelectValue placeholder="Select access log view" defaultValue="totalAccess" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="totalAccess">
+                            Status
+                        </SelectItem>
+                        <SelectItem value="operations">
+                            Operation
+                        </SelectItem>
+                        <SelectItem value="users">
+                            User
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-
-            <AreaChart
-                width={730}
-                height={250}
-                data={logs}
-                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-            >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="timestamp" tickFormatter={dateToStr} />
-                <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                {operations.map(op => (
-                    <Area
-                        key={op}
-                        type="monotone"
-                        dataKey={op}
-                        name={op}
-                        stackId="1"
-                        stroke={operationColors[op]}
-                        fill={operationColors[op]}
-                    />
-                ))}
-            </AreaChart>
+            <ResponsiveContainer width="100%" height="80%" className="m-3">
+                <LineChart data={logs}
+                           margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="timestamp" tickFormatter={dateToStr}/>
+                    <YAxis />
+                    <Tooltip labelFormatter={dateToStr} />
+                    <Legend />
+                    {currentView === 'totalAccess' && logs.length > 0 && Object.keys(logs[0].statusCodes).map(code => (
+                        <Line key={code} type="monotone" dataKey={`statusCodes.${code}`} stroke={statusColors[code]} fill={statusColors[code]} name={`Status ${code}`} />
+                    ))}
+                    {currentView === 'operations' && logs[0]?.operations && Object.keys(logs[0].operations).map(code => (
+                        <Line key={code} type="monotone" dataKey={`operations.${code}`} stroke={operationColors[code]} fill={operationColors[code]} name={code} />
+                    ))}
+                    {currentView === 'users' && logs[0]?.users && Object.keys(logs[0].users).map(code => (
+                        <Line key={code} type="monotone" dataKey={`users.${code}`} stroke={userColors[code]} fill={userColors[code]} name={code} />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
         </div>
     );
 };
