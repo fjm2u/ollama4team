@@ -130,19 +130,20 @@ interface LogEntry {
     statusCodes: { [statusCode: string]: number };
     operations: { [operationId: string]: number };
     users: { [userId: string]: number };
+    models: { [modelId: string]: number }; // Added for model data tracking
 }
 
 const Stats = () => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
-    const [currentView, setCurrentView] = useState<string>('totalAccess'); // Default view
     const [statusColors, setStatusColors] = useState<{ [key: string]: string }>({});
     const [operationColors, setOperationColors] = useState<{ [key: string]: string }>({});
     const [userColors, setUserColors] = useState<{ [key: string]: string }>({});
+    const [modelColors, setModelColors] = useState<{ [key: string]: string }>({}); // State for model colors
 
     useEffect(() => {
         const fetchStats = async () => {
             const response = await fetch("/api/stats");
-            const data: any[] = await response.json(); // APIレスポンスの適切な型定義を行う
+            const data: any[] = await response.json();
             processData(data);
             assignColors(data);
         };
@@ -161,16 +162,19 @@ const Stats = () => {
                 date.setMinutes(0, 0, 0);
                 const hour = date.toISOString();
 
-                const entry = acc[hour] || existingDataMap[hour] || { timestamp: hour, totalAccess: 0, statusCodes: {}, operations: {}, users: {} };
+                const entry = acc[hour] || existingDataMap[hour] || { timestamp: hour, totalAccess: 0, statusCodes: {}, operations: {}, users: {}, models: {} };
                 entry.totalAccess++;
                 entry.statusCodes[item.statusCode] = (entry.statusCodes[item.statusCode] || 0) + 1;
                 entry.operations[item.operationId] = (entry.operations[item.operationId] || 0) + 1;
                 if (item.user && item.user.displayId)
                     entry.users[item.user.displayId] = (entry.users[item.user.displayId] || 0) + 1;
+                if (item.model)
+                    entry.models[item.model] = (entry.models[item.model] || 0) + 1;
 
                 acc[hour] = entry;
                 return acc;
             }, existingDataMap);
+            console.log(updatedData)
 
             return Object.values(updatedData).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         });
@@ -184,43 +188,39 @@ const Stats = () => {
             '#00bfff', '#8a2be2', '#32cd32', '#ff00ff', '#1e90ff', '#ff00ff', '#00ced1']
         const statusCodes = Array.from(new Set(data.map((item: any) => item.statusCode)));
         const operationIds = Array.from(new Set(data.map((item: any) => item.operationId)));
+        const userIds = Array.from(new Set(data.flatMap((item: any) => item.user ? item.user.displayId : [])));
+        const models = Array.from(new Set(data.flatMap((item: any) => item.model ? item.model : [])));
+
         const statusColors: { [key: string]: string } = {};
         const operationColors: { [key: string]: string } = {};
+        const userColors: { [key: string]: string } = {};
+        const modelColors: { [key: string]: string } = {}; // Initialize color mapping for models
+
+        // Assign colors to each category
         statusCodes.forEach((code, index) => {
             statusColors[code] = colorPalette[index % colorPalette.length];
         });
         operationIds.forEach((id, index) => {
             operationColors[id] = colorPalette[(index + statusCodes.length) % colorPalette.length];
         });
+        userIds.forEach((id, index) => {
+            userColors[id] = colorPalette[(index + statusCodes.length + operationIds.length) % colorPalette.length];
+        });
+        models.forEach((name, index) => {
+            modelColors[name] = colorPalette[(index + statusCodes.length + operationIds.length + userIds.length) % colorPalette.length];
+        });
+
         setStatusColors(statusColors);
         setOperationColors(operationColors);
-    };
-    const handleViewChange = (view: string): void => {
-        setCurrentView(view);
+        setUserColors(userColors);
+        setModelColors(modelColors); // Update state with model colors
     };
     const dateToStr = (date: string): string => new Date(date).toLocaleString();
 
     return (
-        <div style={{ width: '100%', height: '250px' }}>
-            <div className="controls">
-                <Select onValueChange={(value) => handleViewChange(value)}>
-                    <SelectTrigger className="w-[280px]">
-                        <SelectValue placeholder="Select access log view" defaultValue="totalAccess" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="totalAccess">
-                            Status
-                        </SelectItem>
-                        <SelectItem value="operations">
-                            Operation
-                        </SelectItem>
-                        <SelectItem value="users">
-                            User
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <ResponsiveContainer width="100%" height="80%" className="m-3">
+        <div style={{ width: '100%' }}>
+            {/* Total Access Chart */}
+            <ResponsiveContainer width="100%" height={250} className="m-3">
                 <LineChart data={logs}
                            margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -228,20 +228,60 @@ const Stats = () => {
                     <YAxis />
                     <Tooltip labelFormatter={dateToStr} />
                     <Legend />
-                    {currentView === 'totalAccess' && logs.length > 0 && Object.keys(logs[0].statusCodes).map(code => (
+                    {logs.length > 0 && Object.keys(logs[0].statusCodes).map(code => (
                         <Line key={code} type="monotone" dataKey={`statusCodes.${code}`} stroke={statusColors[code]} fill={statusColors[code]} name={`Status ${code}`} />
-                    ))}
-                    {currentView === 'operations' && logs[0]?.operations && Object.keys(logs[0].operations).map(code => (
-                        <Line key={code} type="monotone" dataKey={`operations.${code}`} stroke={operationColors[code]} fill={operationColors[code]} name={code} />
-                    ))}
-                    {currentView === 'users' && logs[0]?.users && Object.keys(logs[0].users).map(code => (
-                        <Line key={code} type="monotone" dataKey={`users.${code}`} stroke={userColors[code]} fill={userColors[code]} name={code} />
                     ))}
                 </LineChart>
             </ResponsiveContainer>
+
+            {/* Operations Line Chart */}
+            <ResponsiveContainer width="100%" height={250} className="m-3">
+                <LineChart data={logs}
+                           margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="timestamp" tickFormatter={dateToStr}/>
+                    <YAxis />
+                    <Tooltip labelFormatter={dateToStr} />
+                    <Legend />
+                    {logs[0]?.operations && Object.keys(logs[0].operations).map(code => (
+                        <Line key={code} type="monotone" dataKey={`operations.${code}`} stroke={operationColors[code]} fill={operationColors[code]} name={code} />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
+
+            {/* Users Line Chart */}
+            <ResponsiveContainer width="100%" height={250} className="m-3">
+                <LineChart data={logs}
+                           margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="timestamp" tickFormatter={dateToStr}/>
+                    <YAxis />
+                    <Tooltip labelFormatter={dateToStr} />
+                    <Legend />
+                    {logs[0]?.users && Object.keys(logs[0].users).map(code => (
+                        <Line key={code} type="monotone" dataKey={`users.${code}`} stroke={userColors[code]} fill={userColors[code]} name={`User ${code}`} />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
+
+            {/* Models Line Chart */}
+            {/*<ResponsiveContainer width="100%" height={250} className="m-3">*/}
+            {/*    <LineChart data={logs}*/}
+            {/*               margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>*/}
+            {/*        <CartesianGrid strokeDasharray="3 3" />*/}
+            {/*        <XAxis dataKey="timestamp" tickFormatter={dateToStr}/>*/}
+            {/*        <YAxis />*/}
+            {/*        <Tooltip labelFormatter={dateToStr} />*/}
+            {/*        <Legend />*/}
+            {/*        {logs.length > 0 && Object.keys(logs[0].models).map(modelId => (*/}
+            {/*            <Line key={modelId} type="monotone" dataKey={`models.${modelId}`} stroke={modelColors[modelId]} fill={modelColors[modelId]} name={`Model ${modelId}`} />*/}
+            {/*        ))}*/}
+            {/*    </LineChart>*/}
+            {/*</ResponsiveContainer>*/}
         </div>
     );
-};
+}
+
 
 // Users
 interface User {
