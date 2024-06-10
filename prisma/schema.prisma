@@ -39,6 +39,7 @@ model AccessLog {
   userId      String?
   user        User?      @relation(fields: [userId], references: [id])
   statusCode  Int
+  model       String?
   Operation   Operation? @relation(fields: [operationId], references: [id])
   operationId String?
 

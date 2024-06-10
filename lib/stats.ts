@@ -21,22 +21,24 @@ const add_forbidden_log = async (operationId: string) => {
     })
 }
 
-const add_embeddings_log = async (userId: string, statusCode: number) => {
+const add_embeddings_log = async (userId: string, statusCode: number, model: string) => {
     await update_last_access(userId)
     await prisma.accessLog.create({
         data: {
             operationId: 'embedding',
+            model: model,
             statusCode: statusCode,
             userId: userId,
         }
     })
 }
 
-const add_generate_log = async (userId: string, statusCode: number) => {
+const add_generate_log = async (userId: string, statusCode: number, model: string) => {
     await update_last_access(userId)
     await prisma.accessLog.create({
         data: {
             operationId: 'generate',
+            model: model,
             statusCode: statusCode,
             userId: userId,
         }

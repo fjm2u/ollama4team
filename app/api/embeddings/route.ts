@@ -17,7 +17,7 @@ export async function POST(request: Request) {
             body: JSON.stringify(data),
         });
 
-        await add_embeddings_log(user.id, response.status)
+        await add_embeddings_log(user.id, response.status, data.model)
 
         if (response.status !== 200) {
             return Response.json({ error: "Model not found" }, { status: 404 })
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         return Response.json(await response.json())
     } catch (e) {
         console.error(e)
-        await add_embeddings_log(user.id, 500)
+        await add_embeddings_log(user.id, 500, data.model)
         return Response.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }
