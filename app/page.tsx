@@ -36,14 +36,7 @@ import {date_to_str} from "../lib/date";
 import { signOut } from "next-auth/react"
 import {Settings} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import {Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+import {CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
 
 export default function Home() {
     return (
@@ -185,7 +178,10 @@ const Stats = () => {
             '#fa8072', '#6a5acd', '#ff6347', '#20b2aa', '#f08080', '#4682b4', '#d2b48c',
             '#ff69b4', '#00ff7f', '#87cefa', '#778899', '#b0c4de', '#ff4500', '#da70d6',
             '#ff8c00', '#40e0d0', '#7b68ee', '#00fa9a', '#9370db', '#00ff00', '#ff1493',
-            '#00bfff', '#8a2be2', '#32cd32', '#ff00ff', '#1e90ff', '#ff00ff', '#00ced1']
+            '#00bfff', '#8a2be2', '#32cd32', '#ff00ff', '#1e90ff', '#ff00ff', '#00ced1'
+        ];
+
+        // Unique identifiers extraction
         const statusCodes = Array.from(new Set(data.map((item: any) => item.statusCode)));
         const operationIds = Array.from(new Set(data.map((item: any) => item.operationId)));
         const userIds = Array.from(new Set(data.flatMap((item: any) => item.user ? item.user.displayId : [])));
@@ -196,19 +192,10 @@ const Stats = () => {
         const userColors: { [key: string]: string } = {};
         const modelColors: { [key: string]: string } = {}; // Initialize color mapping for models
 
-        // Assign colors to each category
-        statusCodes.forEach((code, index) => {
-            statusColors[code] = colorPalette[index % colorPalette.length];
-        });
-        operationIds.forEach((id, index) => {
-            operationColors[id] = colorPalette[(index + statusCodes.length) % colorPalette.length];
-        });
-        userIds.forEach((id, index) => {
-            userColors[id] = colorPalette[(index + statusCodes.length + operationIds.length) % colorPalette.length];
-        });
-        models.forEach((name, index) => {
-            modelColors[name] = colorPalette[(index + statusCodes.length + operationIds.length + userIds.length) % colorPalette.length];
-        });
+        statusCodes.forEach((code, index) => statusColors[code] = colorPalette[index % colorPalette.length]);
+        operationIds.forEach((id, index) => operationColors[id] = colorPalette[(index + statusCodes.length) % colorPalette.length]);
+        userIds.forEach((id, index) => userColors[id] = colorPalette[(index + statusCodes.length + operationIds.length) % colorPalette.length]);
+        models.forEach((name, index) => modelColors[name] = colorPalette[(index + statusCodes.length + operationIds.length + userIds.length) % colorPalette.length]);
 
         setStatusColors(statusColors);
         setOperationColors(operationColors);
@@ -228,7 +215,7 @@ const Stats = () => {
                     <YAxis />
                     <Tooltip labelFormatter={dateToStr} />
                     <Legend />
-                    {logs.length > 0 && Object.keys(logs[0].statusCodes).map(code => (
+                    {Object.keys(logs.reduce((acc, log) => ({...acc, ...log.statusCodes}), {})).map(code => (
                         <Line key={code} type="monotone" dataKey={`statusCodes.${code}`} stroke={statusColors[code]} fill={statusColors[code]} name={`Status ${code}`} />
                     ))}
                 </LineChart>
@@ -243,8 +230,8 @@ const Stats = () => {
                     <YAxis />
                     <Tooltip labelFormatter={dateToStr} />
                     <Legend />
-                    {logs[0]?.operations && Object.keys(logs[0].operations).map(code => (
-                        <Line key={code} type="monotone" dataKey={`operations.${code}`} stroke={operationColors[code]} fill={operationColors[code]} name={code} />
+                    {Object.keys(logs.reduce((acc, log) => ({...acc, ...log.operations}), {})).map(code => (
+                        <Line key={code} type="monotone" dataKey={`operations.${code}`} stroke={operationColors[code]} fill={operationColors[code]} name={`${code}`} />
                     ))}
                 </LineChart>
             </ResponsiveContainer>
@@ -258,29 +245,29 @@ const Stats = () => {
                     <YAxis />
                     <Tooltip labelFormatter={dateToStr} />
                     <Legend />
-                    {logs[0]?.users && Object.keys(logs[0].users).map(code => (
-                        <Line key={code} type="monotone" dataKey={`users.${code}`} stroke={userColors[code]} fill={userColors[code]} name={`User ${code}`} />
+                    {Object.keys(logs.reduce((acc, log) => ({...acc, ...log.users}), {})).map(userId => (
+                        <Line key={userId} type="monotone" dataKey={`users.${userId}`} stroke={userColors[userId]} fill={userColors[userId]} name={`${userId}`} />
                     ))}
                 </LineChart>
             </ResponsiveContainer>
 
             {/* Models Line Chart */}
-            {/*<ResponsiveContainer width="100%" height={250} className="m-3">*/}
-            {/*    <LineChart data={logs}*/}
-            {/*               margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>*/}
-            {/*        <CartesianGrid strokeDasharray="3 3" />*/}
-            {/*        <XAxis dataKey="timestamp" tickFormatter={dateToStr}/>*/}
-            {/*        <YAxis />*/}
-            {/*        <Tooltip labelFormatter={dateToStr} />*/}
-            {/*        <Legend />*/}
-            {/*        {logs.length > 0 && Object.keys(logs[0].models).map(modelId => (*/}
-            {/*            <Line key={modelId} type="monotone" dataKey={`models.${modelId}`} stroke={modelColors[modelId]} fill={modelColors[modelId]} name={`Model ${modelId}`} />*/}
-            {/*        ))}*/}
-            {/*    </LineChart>*/}
-            {/*</ResponsiveContainer>*/}
+            <ResponsiveContainer width="100%" height={250} className="m-3">
+                <LineChart data={logs}
+                           margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="timestamp" tickFormatter={dateToStr}/>
+                    <YAxis />
+                    <Tooltip labelFormatter={dateToStr} />
+                    <Legend />
+                    {Object.keys(logs.reduce((acc, log) => ({...acc, ...log.models}), {})).map(modelId => (
+                        <Line key={modelId} type="monotone" dataKey={`models.${modelId}`} stroke={modelColors[modelId]} fill={modelColors[modelId]} name={`${modelId}`} />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
         </div>
     );
-}
+};
 
 
 // Users
