@@ -11,10 +11,10 @@ export async function GET(request: NextRequest) {
     let startDate = searchParams.get('startDate')
     let endDate = searchParams.get('endDate')
     if (!startDate || !endDate) {
-        // 直近2日間のログを取得する
+        // 直近14日間のログを取得する
         const now = new Date()
         endDate = endDate || now.toISOString()
-        startDate = startDate || new Date(now.setDate(now.getDate() - 3)).toISOString()
+        startDate = startDate || new Date(now.setDate(now.getDate() - 14)).toISOString()
     }
 
     const logs = await prisma.accessLog.findMany({
