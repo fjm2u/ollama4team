@@ -37,6 +37,7 @@ import { signOut } from "next-auth/react"
 import {Settings} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import {CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
+import {Separator} from "@/components/ui/separator";
 
 export default function Home() {
     return (
@@ -80,7 +81,6 @@ const Sidebar = () => {
 
 
 const MainContents = () => {
-    const [open_models, setOpenModels] = useState(false);
     return (
         <>
             <div className="flex flex-col items-center bg-white p-4 shadow-md rounded-md">
@@ -89,6 +89,7 @@ const MainContents = () => {
                         <TabsList>
                             <TabsTrigger value="stats">Stats</TabsTrigger>
                             <TabsTrigger value="users">Users</TabsTrigger>
+                            <TabsTrigger value="models">Models</TabsTrigger>
                             <TabsTrigger value="setting">Setting</TabsTrigger>
                         </TabsList>
                         <TabsContent value="stats">
@@ -101,17 +102,19 @@ const MainContents = () => {
                                 <UsersTable/>
                             </div>
                         </TabsContent>
+                        <TabsContent value="models">
+                            <div className="p-4">
+                                <Models />
+                            </div>
+                        </TabsContent>
                         <TabsContent value="setting">
                             <div className="py-8">
-                                <Button variant="outline" className="m-2"
-                                        onClick={() => setOpenModels(true)}>Models</Button>
                                 <Button variant="outline" onClick={() => signOut()} className="m-2">Sign out</Button>
                             </div>
                         </TabsContent>
                     </Tabs>
                 </div>
             </div>
-            <Models open_models={open_models} setOpenModels={setOpenModels}/>
         </>
     )
 }
@@ -522,7 +525,7 @@ interface LocalModel {
     size: string
 }
 
-const Models = ({open_models, setOpenModels}: { open_models: boolean, setOpenModels: any }) => {
+const Models = () => {
     const [localModels, setLocalModels] = useState<LocalModel[]>()
     const {toast } = useToast();
     useEffect(() => {
@@ -537,7 +540,7 @@ const Models = ({open_models, setOpenModels}: { open_models: boolean, setOpenMod
     const AddModel = async (e: any) => {
         e.preventDefault();
         const name = e.target.name.value;
-        console.log(name)
+        // console.log(name)
         const response = await fetch("/api/models", {
             method: "POST",
             body: JSON.stringify({name}),
@@ -557,59 +560,52 @@ const Models = ({open_models, setOpenModels}: { open_models: boolean, setOpenMod
                 variant: "destructive",
             })
         }
-        setOpenModels(false);
     }
     return (
-        <Dialog open={open_models} onOpenChange={setOpenModels}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Models</DialogTitle>
-                    <DialogDescription className="p-6">
-                        <div>
-                            <div className="font-bold">
-                                Add new model
-                            </div>
-                            <div className="p-2">
-                                List of models can be checked <a href={"https://ollama.com/library"} target='_blank'
-                                                                 className="text-blue-500">here</a>.
-                            </div>
-                            <form onSubmit={AddModel}>
-                                <div className="flex w-full max-w-sm items-center space-x-2 p-2">
-                                    <Input type="text" id="name" placeholder="llama3:70b"/>
-                                    <Button type="submit">Add</Button>
-                                </div>
-                            </form>
+        <div className="py-4">
+            <div>
+                <div className="font-bold">
+                    Add new model
+                </div>
+                <div className="p-2">
+                    List of models can be checked <a href={"https://ollama.com/library"} target='_blank'
+                                                     className="text-blue-500">here</a>.
+                </div>
+                <form onSubmit={AddModel}>
+                    <div className="flex w-full max-w-sm items-center space-x-2 p-2">
+                        <Input type="text" id="name" placeholder="llama3:70b"/>
+                        <Button type="submit">Add</Button>
+                    </div>
+                </form>
+                <Separator className="my-4"/>
 
-                            <div className="font-bold pt-4 pb-2">
-                                List of local models
-                            </div>
-                        </div>
-                        <div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Modified at</TableHead>
-                                        <TableHead>Size</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {
-                                        localModels && localModels.map((model: any) => (
-                                            <TableRow key={model.name}>
-                                                <TableCell>{model.name}</TableCell>
-                                                <TableCell>{date_to_str(model.modified_at)}</TableCell>
-                                                <TableCell>{model.size}</TableCell>
-                                            </TableRow>
-                                        ))
-                                    }
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </DialogDescription>
-                </DialogHeader>
-            </DialogContent>
-        </Dialog>
+                <div className="font-bold pt-4 pb-2">
+                    List of local models
+                </div>
+            </div>
+            <div>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Modified at</TableHead>
+                            <TableHead>Size</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {
+                            localModels && localModels.map((model: any) => (
+                                <TableRow key={model.name}>
+                                    <TableCell>{model.name}</TableCell>
+                                    <TableCell>{date_to_str(model.modified_at)}</TableCell>
+                                    <TableCell>{model.size}</TableCell>
+                                </TableRow>
+                            ))
+                        }
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
     )
 }
 
