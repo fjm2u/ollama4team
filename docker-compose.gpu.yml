@@ -32,6 +32,7 @@ services:
               capabilities: [gpu]
 volumes:
   ollama:
+  ollama4team:
 
 networks:
   default:

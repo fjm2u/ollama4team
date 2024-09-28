@@ -26,6 +26,7 @@ services:
 
 volumes:
   ollama:
+  ollama4team:
 
 networks:
   default:
