@@ -10,6 +10,7 @@ services:
       - ollama
     networks:
       - default
+    restart: unless-stopped
 
   ollama:
     image: "ollama/ollama:rocm"
