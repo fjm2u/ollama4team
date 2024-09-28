@@ -6,6 +6,8 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    volumes:
+      - "ollama4team:/app/prisma"
     depends_on:
       - ollama
     networks:
