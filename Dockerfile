@@ -1,5 +1,5 @@
 # ビルドステージ
-FROM node:18-alpine as builder
+FROM node:20-alpine3.20 as builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
@@ -9,7 +9,7 @@ RUN npx prisma db seed
 RUN npm run build
 
 # 実行ステージ
-FROM node:18-alpine
+FROM node:20-alpine3.20
 WORKDIR /app
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
