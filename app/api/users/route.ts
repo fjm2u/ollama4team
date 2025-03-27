@@ -2,9 +2,10 @@ import {auth} from "@/auth";
 import prisma from "../../../lib/prisma";
 import {sha256} from "../../../lib/crypto";
 import {is_admin_or_member} from "../../../lib/authz";
+import {NextRequest} from "next/server";
 
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     const session = await auth()
     if (!session || !is_admin_or_member(session)) return Response.json({ error: "Unauthorized" }, { status: 403 })
 

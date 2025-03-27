@@ -1,43 +1,84 @@
-import {Session} from "next-auth";
+import { Session } from "next-auth";
 import prisma from "./prisma";
-import {sha256} from "./crypto";
+import { sha256 } from "./crypto";
+import { NextRequest } from "next/server";
 
-
-const is_admin_or_owner = (session: Session, displayId: string) => {
-    console.log(session)
-    // @ts-ignore
-    if (session.user.role === "admin") return true
-    // @ts-ignore
-    return session.user.displayId === displayId;
-
+/**
+ * Extended user type with role and displayId properties
+ */
+interface ExtendedUser {
+  role: string;
+  displayId: string;
 }
 
-
-const is_admin = (session: Session) => {
-    // @ts-ignore
-    return session.user.role === "admin";
+/**
+ * Extended session type with our custom user properties
+ */
+interface ExtendedSession extends Session {
+  user: ExtendedUser;
 }
 
+/**
+ * Checks if the current user is an admin or the owner of the resource
+ * @param session - The user session
+ * @param displayId - The displayId of the resource owner
+ * @returns True if the user is an admin or the owner
+ */
+const isAdminOrOwner = (session: Session, displayId: string): boolean => {
+  const extendedSession = session as ExtendedSession;
+  if (extendedSession.user.role === "admin") return true;
+  return extendedSession.user.displayId === displayId;
+};
 
-const is_admin_or_member = (session: Session) => {
-    // @ts-ignore
-    return session.user.role === "member" || session.user.role === "admin";
-}
+/**
+ * Checks if the current user is an admin
+ * @param session - The user session
+ * @returns True if the user is an admin
+ */
+const isAdmin = (session: Session): boolean => {
+  return (session as ExtendedSession).user.role === "admin";
+};
 
+/**
+ * Checks if the current user is an admin or a member
+ * @param session - The user session
+ * @returns True if the user is an admin or a member
+ */
+const isAdminOrMember = (session: Session): boolean => {
+  const extendedSession = session as ExtendedSession;
+  return extendedSession.user.role === "member" || extendedSession.user.role === "admin";
+};
 
-const check_basic_token = async (request: Request) => {
-    if (!request.headers.get("Authorization")) return false
-    // @ts-ignore
-    const token = request.headers.get("Authorization").replace("Basic ", "")
+/**
+ * Validates a request using Basic authentication
+ * @param request - The incoming request
+ * @returns The authenticated user or false if authentication fails
+ */
+const checkBasicToken = async (request: NextRequest) => {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader) return false;
+  
+  const token = authHeader.replace("Basic ", "");
+  const hashedToken = sha256(token);
+  
+  if (process.env.ALLOW_ADMIN_API_CALL === "true") {
     const user = await prisma.user.findUnique({
-        where: {
-            password: sha256(token),
-            // adminアカウントでの認証は許可しない
-            roleId: "member"
-        }
-    })
-    if (!user) return false
-    return user
-}
+      where: {
+        password: hashedToken
+      }
+    });
+    return user || false;
+  }
+  
+  // Admin accounts are not allowed for authentication in this context
+  const user = await prisma.user.findUnique({
+    where: {
+      password: hashedToken,
+      roleId: "member"
+    }
+  });
+  
+  return user || false;
+};
 
-export {is_admin_or_owner, is_admin_or_member, is_admin, check_basic_token}
+export { isAdminOrOwner, isAdminOrMember, isAdmin, checkBasicToken };

@@ -2,9 +2,10 @@ import {auth} from "@/auth";
 import prisma from "../../../../lib/prisma";
 import {sha256} from "../../../../lib/crypto";
 import {is_admin_or_owner} from "../../../../lib/authz";
+import {NextRequest} from "next/server";
 
 
-export async function DELETE(request: Request, { params }: { params: { displayId: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { displayId: string } }) {
     const session = await auth()
     if (!session || !is_admin_or_owner(session, params.displayId)) return Response.json({ error: "Unauthorized" }, { status: 403 })
 
@@ -31,7 +32,7 @@ export async function DELETE(request: Request, { params }: { params: { displayId
 }
 
 // パスワードの変更処理
-export async function PUT(request: Request, { params }: { params: { displayId: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { displayId: string } }) {
     const session = await auth()
     if (!session || !is_admin_or_owner(session, params.displayId)) return Response.json({ error: "Unauthorized" }, { status: 403 })
     const data = await request.json()

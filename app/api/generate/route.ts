@@ -1,11 +1,12 @@
 import fetch from 'node-fetch';
 import { StreamingTextResponse } from "ai"
-import {check_basic_token} from "../../../lib/authz";
+import {checkBasicToken} from "../../../lib/authz";
 import {add_forbidden_log, add_generate_log} from "../../../lib/stats";
+import {NextRequest} from "next/server";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     const data = await request.json()
-    const user = await check_basic_token(request)
+    const user = await checkBasicToken(request)
     if (user === false) {
         await add_forbidden_log('generate')
         return Response.json({ error: "Unauthorized" }, { status: 403 })

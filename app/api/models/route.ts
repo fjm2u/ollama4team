@@ -1,9 +1,10 @@
 import {auth} from "@/auth";
 import {is_admin, is_admin_or_member} from "../../../lib/authz";
 import fetch from "node-fetch";
+import {NextRequest} from "next/server";
 
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     const session = await auth()
     if (!session || !is_admin(session)) return Response.json({ error: "Unauthorized" }, { status: 403 })
     const data = await request.json()
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 }
 
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
     const session = await auth()
     if (!session || !is_admin(session)) return Response.json({ error: "Unauthorized" }, { status: 403 })
     const data = await request.json()
@@ -41,7 +42,7 @@ export async function DELETE(request: Request) {
 }
 
 
-export async function GET(request: Request) {
+export async function GET() {
     const session = await auth()
     if (!session || !is_admin_or_member(session)) return Response.json({ error: "Unauthorized" }, { status: 403 })
     const response = await fetch(process.env.OLLAMA_URL + "/api/tags", {
